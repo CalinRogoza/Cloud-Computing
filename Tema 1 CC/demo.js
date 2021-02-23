@@ -68,7 +68,6 @@ const server = http.createServer((req, res) => {
                     "document.getElementById('btn').onclick = function() {" +
                         "var src = \' "+ link_imagine + "\'," +
                             "img = document.createElement('img');" +
-            
                         "img.src = src;" +
                         "document.body.appendChild(img);"+
                     "}" +
