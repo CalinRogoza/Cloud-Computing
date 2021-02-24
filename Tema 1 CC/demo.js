@@ -2,7 +2,7 @@ const http = require('http');
 const https = require('https');
 const fetch = require("node-fetch");
 const fs = require('fs');
-
+require('dotenv').config();
 
 
 const server = http.createServer((req, res) => {
@@ -10,7 +10,7 @@ const server = http.createServer((req, res) => {
     var link_imagine = "";
     var vreme;
     const openweathermap_func = async () => {
-        await fetch('http://api.openweathermap.org/data/2.5/weather?q=London,uk&APPID=ef9e6a3601fe054e165c7259124a9c1c')
+        await fetch('http://api.openweathermap.org/data/2.5/weather?q=London,uk&APPID=' + process.env.API_KEY_OWM)
             .then(response => response.json())
             .then(data2 => {
                 console.log(data2.weather[0].main)
@@ -21,7 +21,7 @@ const server = http.createServer((req, res) => {
 
     var cuvant_cheie;
     const dictionary_func = async () => {
-        await fetch('https://www.dictionaryapi.com/api/v3/references/thesaurus/json/car?key=07fba6c6-89ec-46ec-835c-9b62c009bdab')
+        await fetch('https://www.dictionaryapi.com/api/v3/references/thesaurus/json/car?key=' + process.env.API_KEY_DICT)
             .then(response => response.json())
             .then(data3 => {
                 console.log(data3[0].meta.syns[0][0]);
@@ -33,7 +33,7 @@ const server = http.createServer((req, res) => {
     const flickr_func = async () => {
         let f1 = await openweathermap_func();
         let f2 = await dictionary_func();
-        await fetch('https://www.flickr.com/services/rest/?method=flickr.photos.search&api_key=b46df196e7115c9d65d8787fb8c53403&text=' + vreme + '%2B' + cuvant_cheie + '&format=json&nojsoncallback=1')
+        await fetch('https://www.flickr.com/services/rest/?method=flickr.photos.search&api_key=' + process.env.API_KEY_FLICKR + '&text=' + vreme + '%2B' + cuvant_cheie + '&format=json&nojsoncallback=1')
             .then((response) => response.json())
             .then((data1) => {
                 // console.log(data1.photos);
@@ -64,8 +64,11 @@ const server = http.createServer((req, res) => {
                 res.write(data);
                 
                 // console.log("MMMMMMMMMMMMMMM", link_imagine);
-                res.write("<script>var variabila = \"" + link_imagine + "\";console.log(variabila);function functie(){" +
+                res.write("<script>var variabila = \"" + link_imagine + "\";console.log(variabila);" + 
+                "function functie(){" +
                     "document.getElementById('btn').onclick = function() {" +
+                    "fetch('http://localhost:3000')" +
+                    ".then((response) => response);" +
                         "var src = \' "+ link_imagine + "\'," +
                             "img = document.createElement('img');" +
                         "img.src = src;" +
