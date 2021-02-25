@@ -7,7 +7,7 @@ require('dotenv').config();
 
 const server = http.createServer((req, res) => {
     console.log('---------------------------REQUEST made-----------------------');
-    var link_imagine = "";
+    var poze = "";
     var vreme;
     const openweathermap_func = async () => {
         let start = new Date();
@@ -57,6 +57,7 @@ const server = http.createServer((req, res) => {
     const flickr_func = async () => {
         let f1 = await openweathermap_func();
         let f2 = await dictionary_func();
+        var link_imagine = "";
         let start = new Date();
         var log = "FLICKR \n";
         await fetch('https://www.flickr.com/services/rest/?method=flickr.photos.search&api_key=' + process.env.API_KEY_FLICKR + '&text=' + vreme + '%2B' + cuvant_cheie + '&format=json&nojsoncallback=1')
@@ -67,6 +68,7 @@ const server = http.createServer((req, res) => {
                 link_imagine += "https://live.staticflickr.com/";
                 link_imagine += data.photos.photo[0].server + "/" + data.photos.photo[0].id + "_" + data.photos.photo[0].secret + ".jpg";
                 console.log(link_imagine);
+                poze += link_imagine + "||";
             })
             .catch((err) => console.log(err));
 
@@ -78,6 +80,8 @@ const server = http.createServer((req, res) => {
         })
 
         console.log("TIME FLICKR: ", new Date()-start,"ms");
+        
+        // console.log("POZE", poze, '\n\n');
     }
 
 
@@ -103,7 +107,7 @@ const server = http.createServer((req, res) => {
                 res.write("<script>var variabila = \"" + link_imagine + "\";console.log(variabila);" + 
                 "function functie(){" +
                     "document.getElementById('btn').onclick = function() {" +
-                    "fetch('http://localhost:3000')" +
+                    "fetch('http://localhost:3000/getresult')" +
                     ".then((response) => response);" +
                         "var src = \' "+ link_imagine + "\'," +
                             "img = document.createElement('img');" +
@@ -118,10 +122,47 @@ const server = http.createServer((req, res) => {
         })
     }
 
-    if(req.url == '/') {
-        path = 'index.html'
+    const fs_apel_paralel = async () => {
+        await paralelrun();
+        console.log("MMMMM", poze);
+        fs.readFile(path, (err, data) => {
+            if (err) {
+                console.log(err);
+            } else {
+                res.write(data);
+                res.write("<script>" + "poze = " + poze + ";" +
+                    "for (var i = 0 ; i < 5 ; i++) {" +
+                        "var src = \'poze[i]\'," +
+                            "img = document.createElement('img');" +
+                        "img.src = src;" +
+                        "document.body.appendChild(img);" +
+                    "}"+
+                    "</script></html>");
+                console.log(poze);
+                res.end();
+            }
+        })
+    }
+
+    async function paralelrun() {
+        var i;
+        var function_array;
+        for(i = 0 ; i < 5 ; i++) {
+            function_array += flickr_func();
+        }
+        await Promise.all(function_array);            
+    }
+    
+
+    if(req.url == '/getresult') {
+        path = 'index.html';
         res.statusCode = 200;
         fs_apel();
+    }
+    else if (req.url == '/paralelrun') {
+        path = 'paralel.html';
+        res.statusCode = 200;
+        fs_apel_paralel();
     }
 
     // fs_apel();
