@@ -2,13 +2,16 @@ const http = require('http');
 const https = require('https');
 const fetch = require("node-fetch");
 const fs = require('fs');
+const { resolve } = require('path');
 require('dotenv').config();
 
 
 const server = http.createServer((req, res) => {
     console.log('---------------------------REQUEST made-----------------------');
     var poze = "";
+    var link_imagine = "";
     var vreme;
+
     const openweathermap_func = async () => {
         let start = new Date();
         var log = "OPEN-WEATHER-MAP \n";
@@ -20,7 +23,7 @@ const server = http.createServer((req, res) => {
                 vreme = data.weather[0].main;
             })
             .catch((err) => console.log(err));
-        
+
         log += "TIME OWM: "
         log += new Date() - start;
         log += "ms \n\n"
@@ -28,7 +31,7 @@ const server = http.createServer((req, res) => {
             if (err) throw err;
         })
 
-        console.log("TIME OWM: ", new Date()-start,"ms");
+        console.log("TIME OWM: ", new Date() - start, "ms");
     }
 
     var cuvant_cheie;
@@ -51,46 +54,47 @@ const server = http.createServer((req, res) => {
             if (err) throw err;
         })
 
-        console.log("TIME Dictionary: ", new Date()-start,"ms");
+        console.log("TIME Dictionary: ", new Date() - start, "ms");
     }
 
     const flickr_func = async () => {
         let f1 = await openweathermap_func();
         let f2 = await dictionary_func();
-        var link_imagine = "";
+        link_imagine = "";
         let start = new Date();
         var log = "FLICKR \n";
+
         await fetch('https://www.flickr.com/services/rest/?method=flickr.photos.search&api_key=' + process.env.API_KEY_FLICKR + '&text=' + vreme + '%2B' + cuvant_cheie + '&format=json&nojsoncallback=1')
             .then((response) => response.json())
             .then((data) => {
-                // console.log(data1.photos);
+                // console.log(data.photos.photo.length);
                 log += JSON.stringify(data) + "\n";
                 link_imagine += "https://live.staticflickr.com/";
                 link_imagine += data.photos.photo[0].server + "/" + data.photos.photo[0].id + "_" + data.photos.photo[0].secret + ".jpg";
                 console.log(link_imagine);
                 poze += link_imagine + "||";
+                // console.log(poze);
             })
             .catch((err) => console.log(err));
 
-        log += "TIME FLICKR: "
+        log += "TIME FLICKR: ||";
         log += new Date() - start;
-        log += "ms \n\n"
+        log += "||ms \n\n";
+
         fs.appendFile('log.txt', log, function (err) {
             if (err) throw err;
         })
 
-        console.log("TIME FLICKR: ", new Date()-start,"ms");
-        
-        // console.log("POZE", poze, '\n\n');
+        console.log("TIME FLICKR: ", new Date() - start, "ms");
     }
 
+    function helper() {
+        return new Promise((resolve) => {
+            flickr_func();
+            resolve();
+        })
+    }
 
-    // const noname = async () => {
-    //     await flickr_func();
-    //     console.log("AAAAAAAAAAAAAAAA", link_imagine);
-    // }
-
-    // noname();
 
     res.setHeader('Content-Type', 'text/html');
 
@@ -102,20 +106,19 @@ const server = http.createServer((req, res) => {
                 console.log(err);
             } else {
                 res.write(data);
-                
-                // console.log("MMMMMMMMMMMMMMM", link_imagine);
-                res.write("<script>var variabila = \"" + link_imagine + "\";console.log(variabila);" + 
-                "function functie(){" +
+
+                res.write("<script>var variabila = \"" + link_imagine + "\";console.log(variabila);" +
+                    "function functie(){" +
                     "document.getElementById('btn').onclick = function() {" +
                     "fetch('http://localhost:3000/getresult')" +
-                    ".then((response) => response);" +
-                        "var src = \' "+ link_imagine + "\'," +
-                            "img = document.createElement('img');" +
-                        "img.src = src;" +
-                        "document.body.appendChild(img);"+
+                    ".then(response => response);" +
+                    "var src = \' " + link_imagine + "\'," +
+                    "img = document.createElement('img');" +
+                    "img.src = src;" +
+                    "document.body.appendChild(img);" +
                     "}" +
-                "}" +
-                "</script></html>");
+                    "}" +
+                    "</script></html>");
 
                 res.end();
             }
@@ -123,8 +126,7 @@ const server = http.createServer((req, res) => {
     }
 
     const fs_apel_paralel = async () => {
-        await paralelrun();
-        console.log("MMMMM", poze);
+        // await paralelrun();
         fs.readFile(path, (err, data) => {
             if (err) {
                 console.log(err);
@@ -132,11 +134,11 @@ const server = http.createServer((req, res) => {
                 res.write(data);
                 res.write("<script>" + "poze = " + poze + ";" +
                     "for (var i = 0 ; i < 5 ; i++) {" +
-                        "var src = \'poze[i]\'," +
-                            "img = document.createElement('img');" +
-                        "img.src = src;" +
-                        "document.body.appendChild(img);" +
-                    "}"+
+                    "var src = \'poze[i]\'," +
+                    "img = document.createElement('img');" +
+                    "img.src = src;" +
+                    "document.body.appendChild(img);" +
+                    "}" +
                     "</script></html>");
                 console.log(poze);
                 res.end();
@@ -147,14 +149,51 @@ const server = http.createServer((req, res) => {
     async function paralelrun() {
         var i;
         var function_array;
-        for(i = 0 ; i < 5 ; i++) {
-            function_array += flickr_func();
+        for (i = 0; i < 5; i++) {
+            function_array += helper();
         }
-        await Promise.all(function_array);            
-    }
-    
+        Promise.all(function_array)
+            .then(fs_apel_paralel())
+            .then(console.log("ASADASDSADAS", poze))
 
-    if(req.url == '/getresult') {
+        // await fs_apel_paralel();
+        // console.log(poze);
+    }
+
+
+    const fs_metrics = async () => {
+        fs.readFile(path, (err, data) => {
+            if (err) {
+                console.log(err);
+            } else {
+                res.write(data);
+                var timpi = []
+                fs.readFile('log.txt', (err, data) => {
+                    data_string = data.toString();
+
+                    var count = (data_string.match(/TIME FLICKR:/g)).length;
+                    console.log(count);
+
+                    timpi.push(data_string.split('||')[1]);
+
+                    var pas = 1;
+                    for (var i = 0; i < count - 1; i++) {
+                        pas = pas + 2;
+                        timpi.push(data_string.split('||')[pas]);
+                    }
+
+                    console.log("TIMPI:", timpi);
+
+                    res.write("<script> myChart.data.datasets[0].data = [" + timpi + "]; myChart.update(); var n = myChart.data.datasets[0].data.length; console.log(n);myChart.data.labels=[]; for (var i = 1; i <= n; i++) {myChart.data.labels.push(i);} myChart.update();</script></html>");
+                    res.end();
+                })
+
+            }
+        })
+    }
+
+
+    if (req.url == '/getresult') {
         path = 'index.html';
         res.statusCode = 200;
         fs_apel();
@@ -162,10 +201,13 @@ const server = http.createServer((req, res) => {
     else if (req.url == '/paralelrun') {
         path = 'paralel.html';
         res.statusCode = 200;
-        fs_apel_paralel();
+        paralelrun();
     }
-
-    // fs_apel();
+    else if (req.url == '/metrics') {
+        path = 'metrics.html';
+        res.statusCode = 200;
+        fs_metrics();
+    }
 
 });
 
