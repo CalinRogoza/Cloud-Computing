@@ -17,53 +17,95 @@ const server = http.createServer((req, res) => {
 
     const urlparse = url.parse(req.url, true);
 
-    if (urlparse.pathname == '/cats' && req.method == 'GET') {
+    var id = urlparse.pathname.split('/');
+    var cale = id[1];
+    id = id[2];
+    console.log(id);
 
-        con.query("SELECT * FROM cats;", function (err, result, fields) {
-            if (err) throw err; // caz eroare...
-            raspuns = JSON.stringify(result);
-            console.log(raspuns);
-            res.writeHead(200, { 'Content-Type': 'application/json' });
-            res.end(raspuns);
-        });
+    if (id == null) {    // atunci cand url nu contine un id
 
-    }
+        console.log("E NULL");
 
-    if (urlparse.pathname == '/cats' && req.method == 'POST') {
-        var body = '';
-        req.on('data', function (data) {
-            body += data;
-            if (body.length > 1e6) {
-                req.connection.destroy();
-            }
-        });
-        // var post;
-        req.on('end', function () {
-            var post = JSON.parse(body);
-            console.log(post);
+        if (urlparse.pathname == '/cats' && req.method == 'GET') {
 
-            con.query("INSERT INTO cats (name,age,color) VALUES ('" + post.name + "'," + post.age + ",'" + post.color + "');", function (err, result, fields) {
-                if (err) throw err;
+
+            con.query("SELECT * FROM cats;", function (err, result, fields) {
+                if (err) throw err; // caz eroare...
+                raspuns = JSON.stringify(result);
+                console.log(raspuns);
                 res.writeHead(200, { 'Content-Type': 'application/json' });
-                res.end(JSON.stringify(post));
-            })
+                res.end(raspuns);
+            });
 
-        });
-        // console.log(post);
+        }
 
+        if (urlparse.pathname == '/cats' && req.method == 'POST') {
+            var body = '';
+            req.on('data', function (data) {
+                body += data;
+                if (body.length > 1e6) {
+                    req.connection.destroy();
+                }
+            });
 
-        // con.connect(function(err) {
-        //     if (err) throw err;
-        //     con.query("SELECT * FROM cats;", function (err, result, fields) {
-        //         if (err) throw err;
-        //         raspuns = JSON.stringify(result);
-        //         console.log(raspuns);
-        //         res.writeHead(200, {'Content-Type': 'application/json'});
-        //         res.end(raspuns);
-        //     });
-        // });
+            req.on('end', function () {
+                var post = JSON.parse(body);
+                console.log(post);
+
+                con.query("INSERT INTO cats (name,age,color) VALUES ('" + post.name + "'," + post.age + ",'" + post.color + "');", function (err, result, fields) {
+                    if (err) throw err;
+                    res.writeHead(200, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify(post));
+                })
+            });
+        }
     }
-    
+    else if (id != '') {
+        console.log("CU ID");
+        console.log(cale);
+        // console.log(typeof(id));
+        if (cale == 'cats' && req.method == 'GET') {
+            console.log("ARE ID");
+            con.query("SELECT * FROM cats WHERE id = " + id + ";", function (err, result, fields) {
+                if (err) throw err; // caz eroare...
+                raspuns = JSON.stringify(result);
+                console.log(raspuns);
+                res.writeHead(200, { 'Content-Type': 'application/json' });
+                res.end(raspuns);
+            });
+        }
+
+        if (cale == 'cats' && req.method == 'DELETE') {
+            console.log("ARE ID");
+            con.query("DELETE FROM cats WHERE id = " + id + ";", function (err, result, fields) {
+                if (err) throw err; // caz eroare...
+                raspuns = JSON.parse(JSON.stringify(result));
+
+                if (raspuns.affectedRows != 0) {
+                    res.writeHead(200, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify(raspuns));
+                }
+                else {  // daca a fost deja stearsa sau nu a fost gasita, se returneaza 404
+                    res.writeHead(404, { 'Content-Type': 'application/json' });
+                    res.end("This resource cannot be found.")
+                }
+
+            });
+        }
+
+        if (req.method == 'POST') { // cand se face post cu parametru, nu are sens
+            res.writeHead(400, { 'Content-Type': 'application/json' });
+            res.end('Bad request.');
+        }
+
+    }
+    else {  // nu e construit corect url: /cats/
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end('Invalid url.');
+    }
+
+
+
 });
 
 server.listen(3000, 'localhost', () => {
