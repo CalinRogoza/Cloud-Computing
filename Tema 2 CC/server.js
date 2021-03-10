@@ -59,6 +59,12 @@ const server = http.createServer((req, res) => {
                 })
             });
         }
+
+        if (req.method == 'PUT') { // daca incearca sa se faca PUT pe toata colectia
+            res.writeHead(405, { 'Content-Type': 'application/json' });
+            res.end('Method not allowed.');
+        }
+
     }
     else if (id != '') {
         console.log("CU ID");
@@ -93,13 +99,43 @@ const server = http.createServer((req, res) => {
             });
         }
 
+        if (cale == 'cats' && req.method == 'PUT') {
+            // daca am rows affected => 200 , altfel 404
+            var body = '';
+            req.on('data', function (data) {
+                body += data;
+                if (body.length > 1e6) {
+                    req.connection.destroy();
+                }
+            });
+
+            req.on('end', function () {
+                var put = JSON.parse(body);
+                console.log(put);
+                con.query("UPDATE cats SET name='" + put.name + "', age=" + put.age + ", color='" + put.color + "' WHERE id =" + id + ";", function (err, result, fields) {
+                    if (err) throw err; // caz eroare...
+                    raspuns = JSON.parse(JSON.stringify(result));
+                    console.log("RASP: " + raspuns);
+                
+                    if (raspuns.affectedRows != 0) {
+                        res.writeHead(200, { 'Content-Type': 'application/json' });
+                        res.end();
+                    }
+                    else {  // daca nu a fost gasita, se returneaza 404
+                        res.writeHead(404, { 'Content-Type': 'application/json' });
+                        res.end("This resource cannot be found.")
+                    }
+                });
+            });
+        }
+
         if (req.method == 'POST') { // cand se face post cu parametru, nu are sens
             res.writeHead(400, { 'Content-Type': 'application/json' });
             res.end('Bad request.');
         }
 
     }
-    else {  // nu e construit corect url: /cats/
+    else {  // nu e construit corect url]: /cats/
         res.writeHead(400, { 'Content-Type': 'application/json' });
         res.end('Invalid url.');
     }
