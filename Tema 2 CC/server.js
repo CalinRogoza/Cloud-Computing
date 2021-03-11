@@ -24,7 +24,7 @@ const server = http.createServer((req, res) => {
 
     if (id == null) {    // atunci cand url nu contine un id
 
-        console.log("E NULL");
+        console.log("FARA ID");
 
         if (urlparse.pathname == '/cats' && req.method == 'GET') {
 
@@ -54,13 +54,13 @@ const server = http.createServer((req, res) => {
 
                 con.query("INSERT INTO cats (name,age,color) VALUES ('" + post.name + "'," + post.age + ",'" + post.color + "');", function (err, result, fields) {
                     if (err) throw err;
-                    res.writeHead(200, { 'Content-Type': 'application/json' });
+                    res.writeHead(201, { 'Content-Type': 'application/json' });
                     res.end(JSON.stringify(post));
                 })
             });
         }
 
-        if (req.method == 'PUT') { // daca incearca sa se faca PUT pe toata colectia
+        if (req.method == 'PUT' || req.method == 'PATCH' || req.method == 'DELETE') { // daca incearca sa se faca PUT/PATCH/DELETE pe toata colectia
             res.writeHead(405, { 'Content-Type': 'application/json' });
             res.end('Method not allowed.');
         }
@@ -76,8 +76,15 @@ const server = http.createServer((req, res) => {
                 if (err) throw err; // caz eroare...
                 raspuns = JSON.stringify(result);
                 console.log(raspuns);
-                res.writeHead(200, { 'Content-Type': 'application/json' });
-                res.end(raspuns);
+
+                if (result[0] == null) { // daca nu returneaza nimic query-ul
+                    res.writeHead(404, { 'Content-Type': 'application/json' });
+                    res.end("Not found.");
+                }
+                else {
+                    res.writeHead(200, { 'Content-Type': 'application/json' });
+                    res.end(raspuns);
+                }
             });
         }
 
@@ -116,7 +123,7 @@ const server = http.createServer((req, res) => {
                     if (err) throw err; // caz eroare...
                     raspuns = JSON.parse(JSON.stringify(result));
                     console.log("RASP: " + raspuns);
-                
+
                     if (raspuns.affectedRows != 0) {
                         res.writeHead(200, { 'Content-Type': 'application/json' });
                         res.end();
@@ -129,9 +136,21 @@ const server = http.createServer((req, res) => {
             });
         }
 
-        if (req.method == 'POST') { // cand se face post cu parametru, nu are sens
-            res.writeHead(400, { 'Content-Type': 'application/json' });
-            res.end('Bad request.');
+        if (cale == 'cats' && req.method == 'POST') { // cand se face post cu ID
+            con.query("SELECT * FROM cats WHERE id = " + id + ";", function (err, result, fields) {
+                if (err) throw err; // caz eroare...
+                raspuns = JSON.stringify(result);
+                console.log(raspuns);
+                
+                if (result[0] == null) { // daca nu returneaza nimic query-ul
+                    res.writeHead(404, { 'Content-Type': 'application/json' });
+                    res.end();
+                }
+                else {
+                    res.writeHead(409, { 'Content-Type': 'application/json' }); // Conflict
+                    res.end();
+                }
+            });
         }
 
     }
