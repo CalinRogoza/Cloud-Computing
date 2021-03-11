@@ -66,7 +66,7 @@ const server = http.createServer((req, res) => {
         }
 
     }
-    else if (id != '') {
+    else if (!isNaN(id) && id != '') {
         console.log("CU ID");
         console.log(cale);
         // console.log(typeof(id));
@@ -214,7 +214,7 @@ const server = http.createServer((req, res) => {
         }
 
     }
-    else {  // nu e construit corect url: /cats/
+    else {  // nu e construit corect url: /cats/ sau contine un string (de ex: /cats/bla)
         res.writeHead(400, { 'Content-Type': 'application/json' });
         res.end('Invalid url.');
     }
