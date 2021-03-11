@@ -30,7 +30,7 @@ const server = http.createServer((req, res) => {
 
 
             con.query("SELECT * FROM cats;", function (err, result, fields) {
-                if (err) throw err; // caz eroare...
+                if (err) throw err;
                 raspuns = JSON.stringify(result);
                 console.log(raspuns);
                 res.writeHead(200, { 'Content-Type': 'application/json' });
@@ -62,7 +62,7 @@ const server = http.createServer((req, res) => {
 
         if (req.method == 'PUT' || req.method == 'PATCH' || req.method == 'DELETE') { // daca incearca sa se faca PUT/PATCH/DELETE pe toata colectia
             res.writeHead(405, { 'Content-Type': 'application/json' });
-            res.end('Method not allowed.');
+            res.end();
         }
 
     }
@@ -73,13 +73,13 @@ const server = http.createServer((req, res) => {
         if (cale == 'cats' && req.method == 'GET') {
             console.log("ARE ID");
             con.query("SELECT * FROM cats WHERE id = " + id + ";", function (err, result, fields) {
-                if (err) throw err; // caz eroare...
+                if (err) throw err;
                 raspuns = JSON.stringify(result);
                 console.log(raspuns);
 
                 if (result[0] == null) { // daca nu returneaza nimic query-ul
                     res.writeHead(404, { 'Content-Type': 'application/json' });
-                    res.end("Not found.");
+                    res.end();
                 }
                 else {
                     res.writeHead(200, { 'Content-Type': 'application/json' });
@@ -91,7 +91,7 @@ const server = http.createServer((req, res) => {
         if (cale == 'cats' && req.method == 'DELETE') {
             console.log("ARE ID");
             con.query("DELETE FROM cats WHERE id = " + id + ";", function (err, result, fields) {
-                if (err) throw err; // caz eroare...
+                if (err) throw err;
                 raspuns = JSON.parse(JSON.stringify(result));
 
                 if (raspuns.affectedRows != 0) {
@@ -119,29 +119,36 @@ const server = http.createServer((req, res) => {
             req.on('end', function () {
                 var put = JSON.parse(body);
                 console.log(put);
-                con.query("UPDATE cats SET name='" + put.name + "', age=" + put.age + ", color='" + put.color + "' WHERE id =" + id + ";", function (err, result, fields) {
-                    if (err) throw err; // caz eroare...
-                    raspuns = JSON.parse(JSON.stringify(result));
-                    console.log("RASP: " + raspuns);
 
-                    if (raspuns.affectedRows != 0) {
-                        res.writeHead(200, { 'Content-Type': 'application/json' });
-                        res.end();
-                    }
-                    else {  // daca nu a fost gasita, se returneaza 404
-                        res.writeHead(404, { 'Content-Type': 'application/json' });
-                        res.end("This resource cannot be found.")
-                    }
-                });
+                if (put.name == null || put.age == null || put.color == null) { // daca nu se face put cu toti parametrii
+                    res.writeHead(400, { 'Content-Type': 'application/json' });
+                    res.end('Please fill in all the body parameters.');
+                }
+                else {
+                    con.query("UPDATE cats SET name='" + put.name + "', age=" + put.age + ", color='" + put.color + "' WHERE id =" + id + ";", function (err, result, fields) {
+                        if (err) throw err;
+                        raspuns = JSON.parse(JSON.stringify(result));
+                        console.log("RASP: " + raspuns);
+
+                        if (raspuns.affectedRows != 0) {
+                            res.writeHead(200, { 'Content-Type': 'application/json' });
+                            res.end();
+                        }
+                        else {  // daca nu a fost gasita, se returneaza 404
+                            res.writeHead(404, { 'Content-Type': 'application/json' });
+                            res.end("This resource cannot be found.")
+                        }
+                    });
+                }
             });
         }
 
         if (cale == 'cats' && req.method == 'POST') { // cand se face post cu ID
             con.query("SELECT * FROM cats WHERE id = " + id + ";", function (err, result, fields) {
-                if (err) throw err; // caz eroare...
+                if (err) throw err;
                 raspuns = JSON.stringify(result);
                 console.log(raspuns);
-                
+
                 if (result[0] == null) { // daca nu returneaza nimic query-ul
                     res.writeHead(404, { 'Content-Type': 'application/json' });
                     res.end();
@@ -153,13 +160,64 @@ const server = http.createServer((req, res) => {
             });
         }
 
+        if (cale == 'cats' && req.method == 'PATCH') {
+            var body = '';
+            req.on('data', function (data) {
+                body += data;
+                if (body.length > 1e6) {
+                    req.connection.destroy();
+                }
+            });
+
+            req.on('end', function () {
+
+                con.query("SELECT * FROM cats WHERE id = " + id + ";", function (err, result, fields) {
+                    if (err) throw err;
+                    raspuns = JSON.stringify(result);
+                    console.log(raspuns);
+
+                    if (result[0] == null) {
+                        res.writeHead(404, { 'Content-Type': 'application/json' });
+                        res.end();
+                    }
+                    else {
+                        var patch = JSON.parse(body);
+                        console.log("PATCH" + patch.name + " " + patch.age + " " + patch.color);
+                        if (patch.name != null) {
+                            con.query("UPDATE cats SET name = '" + patch.name + "' WHERE id = " + id + ";", function (err, result, fields) {
+                                if (err) throw err;
+                                raspuns = JSON.stringify(result);
+                                console.log(raspuns);
+                            });
+                        }
+                        if (patch.age != null) {
+                            con.query("UPDATE cats SET age = " + patch.age + " WHERE id = " + id + ";", function (err, result, fields) {
+                                if (err) throw err;
+                                raspuns = JSON.stringify(result);
+                                console.log(raspuns);
+                            });
+                        }
+                        if (patch.color != null) {
+                            con.query("UPDATE cats SET color = '" + patch.color + "' WHERE id = " + id + ";", function (err, result, fields) {
+                                if (err) throw err;
+                                raspuns = JSON.stringify(result);
+                                console.log(raspuns);
+                            });
+                        }
+
+                        res.writeHead(200, { 'Content-Type': 'application/json' });
+                        res.end();
+                    }
+                });
+
+            });
+        }
+
     }
-    else {  // nu e construit corect url]: /cats/
+    else {  // nu e construit corect url: /cats/
         res.writeHead(400, { 'Content-Type': 'application/json' });
         res.end('Invalid url.');
     }
-
-
 
 });
 
