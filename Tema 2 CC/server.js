@@ -77,7 +77,7 @@ const server = http.createServer((req, res) => {
 
         if (req.method == 'PUT' || req.method == 'PATCH' || req.method == 'DELETE') { // daca incearca sa se faca PUT/PATCH/DELETE pe toata colectia
             res.writeHead(405, { 'Content-Type': 'application/json' });
-            res.end();
+            res.end('Not allowed.');
         }
 
     }
@@ -98,7 +98,7 @@ const server = http.createServer((req, res) => {
 
                     if (result[0] == null) { // daca nu returneaza nimic query-ul
                         res.writeHead(404, { 'Content-Type': 'application/json' });
-                        res.end();
+                        res.end('Not found.');
                     }
                     else {
                         res.writeHead(200, { 'Content-Type': 'application/json' });
